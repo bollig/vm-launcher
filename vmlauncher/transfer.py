@@ -2,7 +2,6 @@ import os
 import gzip
 
 from operator import itemgetter
-from sys import exit
 from threading import Thread
 from threading import Condition
 from Queue import Queue
@@ -65,8 +64,9 @@ class TransferTarget:
         self.local_temp = transfer_manager.local_temp
         basename = os.path.basename(file)
         if len(basename) < 1:
-            print red(Exception("Invalid file specified - %s" % file))
-            exit(-1)
+            e = Exception("Invalid file specified - %s" % file)
+            print red(e)
+            raise e
         self.basename = basename
 
     def should_compress(self):
@@ -307,8 +307,9 @@ class FileTransferManager:
             finally:
                 if not retry:
                     return
-        print red("Failed to transfer file %s, exiting..." % source)
-        exit(-1)
+        e = Exception("Failed to transfer file %s, exiting..." % source)
+        print red(e)
+        raise e
 
     def _enqueue_chunk(self, transfer_chunk):
         self.transfer_queue.put(transfer_chunk)
