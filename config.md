@@ -11,7 +11,7 @@ dozens of cloud providers are currently implemented.
 ## aws 
 
 This cloud supports the following compute parameters: `access_id`,
-`secret_key`, `size_id`, `image_id`, `availability_zone`.
+`secret_key`, `size_id`, `base_image_id`, `image_id`, `availability_zone`.
 
 The aws driver supports two packaging modes, this is the code that is called
 when the `package` action is executed. By default, package will cause some
@@ -36,7 +36,7 @@ use the `eucalyptus` driver, this `openstack` driver targets the native API.
 
 This driver allows the following parameters `username`, `password`, `host`,
 `secure` (boolean), `port`, `ex_force_uth_url`, `ex_force_base_url`,
-`ex_force_auth_version`, `ex_tenant_name`, `flavor_id`, `image_id`,
+`ex_force_auth_version`, `ex_tenant_name`, `flavor_id`, `base_image_id`, `image_id`,
 `keypair_name`, and `package_image_name`.
 
 ## eucalyptus
