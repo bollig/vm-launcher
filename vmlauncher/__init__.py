@@ -498,7 +498,7 @@ class Ec2VmLauncher(VmLauncher):
         return conn
 
 
-def build_vm_launcher(options, package_action_known=False):
+def build_vm_launcher(options, base_image=False):
     provider_option_key = 'vm_provider'
     # HACK to maintain backward compatibity on vm_host option
     if not 'vm_provider' in options and 'vm_host' in options:
@@ -519,8 +519,8 @@ def build_vm_launcher(options, package_action_known=False):
                       'eucalyptus': EucalyptusVmLauncher}
     driver_class = driver_classes.get(driver, Ec2VmLauncher)
 
-    if package_action_known and 'base_image_id' in provider_options:
-        print "Action 'package' defaults to option 'base_image_id' when specified."
+    if base_image and 'base_image_id' in provider_options:
+        print "VMLauncher defaulted to provider 'base_image_id' option."
         provider_options['image_id'] = provider_options['base_image_id']
 
     vm_launcher = driver_class(driver_options_key, options)
