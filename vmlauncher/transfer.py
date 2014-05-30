@@ -243,6 +243,7 @@ class FileTransferManager:
         if self.chunk_size > 0:
             self.transfer_complete_condition.acquire()
             while not self.transfer_complete:
+                print "Waiting for transfer complete condition"
                 self.transfer_complete_condition.wait()
             self.transfer_complete_condition.release()
         while True:
@@ -263,10 +264,12 @@ class FileTransferManager:
                         sudo("gunzip -f '%s'" % transfer_target.compressed_basename(), user=self.transfer_as)
                     elif chunked:
                         sudo("cat '%s'_part* > '%s'" % (basename, basename), user=self.transfer_as)
-                        sudo("rm '%s_part'*" % (basename), user=self.transfer_as)
+                        sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
             except Exception as e:
                 print red("Failed to decompress or unsplit a transfered file.")
                 print red(e)
+            except:
+                print red("Failed to decompress. Retrying...")
             finally:
                 self.decompress_queue.task_done()
 
