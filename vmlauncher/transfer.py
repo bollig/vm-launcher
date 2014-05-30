@@ -253,25 +253,29 @@ class FileTransferManager:
                 chunked = transfer_target.split_up()
                 compressed = transfer_target.do_compress or transfer_target.precompressed
                 with cd(self.destination):
-                    retry_decompress = True
-                    while retry_decompress:
+                    retry_decompress = 0
+                    while retry_decompress < 5:
                         try: 
                             if compressed and chunked:
                                 destination = transfer_target.decompressed_basename()
                                 if transfer_target.precompressed:
-                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
+                                    #sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
+                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination))
+                                    self._chown(destination)
                                 else:
-                                    sudo("zcat '%s_part'* > %s" % (basename, destination), user=self.transfer_as)
-                                sudo("rm '%s_part'*" % (basename), user=self.transfer_as)
+                                    sudo("zcat '%s_part'* > %s" % (basename, destination))
+                                    self._chown(destination)
+                                sudo("rm '%s_part'*" % (basename))
                             elif compressed:
                                 sudo("gunzip -f '%s'" % transfer_target.compressed_basename(), user=self.transfer_as)
                             elif chunked:
-                                sudo("cat '%s'_part* > '%s'" % (basename, basename), user=self.transfer_as)
-                                sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
-                            retry_decompress = False
+                                sudo("cat '%s'_part* > '%s'" % (basename, basename))
+                                self._chown(destination)
+                                sudo("rm '%s'_part*" % (basename))
+                            retry_decompress = 5
                         except:
                             print red("Failed to decompress. Retrying...")
-                            retry_decompress = True
+                            retry_decompress = retry_decompress + 1
             except Exception as e:
                 print red("Failed to decompress or unsplit a transfered file.")
                 print red(e)
