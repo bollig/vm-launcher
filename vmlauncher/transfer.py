@@ -7,7 +7,7 @@ from threading import Condition
 from Queue import Queue
 
 from fabric.api import local, put, sudo, cd
-from fabric.colors import red
+from fabric.colors import red, green, yellow
 
 
 
@@ -240,6 +240,8 @@ class FileTransferManager:
                 self.compress_queue.task_done()
 
     def _decompress_files(self):
+        self._chown(self.destination)
+        sudo("chmod 777 %s" % (self.destination), user=self.transfer_as)
         if self.chunk_size > 0:
             self.transfer_complete_condition.acquire()
             while not self.transfer_complete:
@@ -252,34 +254,36 @@ class FileTransferManager:
                 basename = transfer_target.basename
                 chunked = transfer_target.split_up()
                 compressed = transfer_target.do_compress or transfer_target.precompressed
+                print green(self.destination)
                 with cd(self.destination):
                     retry_decompress = 0
                     while retry_decompress < 5:
+                        destination = transfer_target.decompressed_basename()
                         try: 
                             if compressed and chunked:
-                                destination = transfer_target.decompressed_basename()
                                 if transfer_target.precompressed:
-                                    #sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
-                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination))
+                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
                                     self._chown(destination)
+                                    sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                                 else:
-                                    sudo("zcat '%s_part'* > %s" % (basename, destination))
+                                    sudo("zcat '%s_part'* > %s" % (basename, destination), user=self.transfer_as)
                                     self._chown(destination)
-                                sudo("rm '%s_part'*" % (basename))
+                                    sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                             elif compressed:
                                 sudo("gunzip -f '%s'" % transfer_target.compressed_basename(), user=self.transfer_as)
                             elif chunked:
-                                sudo("cat '%s'_part* > '%s'" % (basename, basename))
+                                sudo("cat '%s'_part* > '%s'" % (basename, destination), user=self.transfer_as)
                                 self._chown(destination)
-                                sudo("rm '%s'_part*" % (basename))
+                                sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                             retry_decompress = 5
                         except:
-                            print red("Failed to decompress. Retrying...")
+                            print red("User: %s, Failed to decompress. Retrying..." % (self.transfer_as) )
                             retry_decompress = retry_decompress + 1
             except Exception as e:
                 print red("Failed to decompress or unsplit a transfered file.")
                 print red(e)
             finally:
+                #sudo("chmod 755 %s" % (self.destination))
                 self.decompress_queue.task_done()
 
     def _put_files(self):
