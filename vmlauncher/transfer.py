@@ -8,6 +8,8 @@ from Queue import Queue
 
 from fabric.api import local, put, sudo, cd
 from fabric.colors import red, green, yellow
+from fabric.context_managers import settings, show, hide
+
 
 
 
@@ -65,7 +67,7 @@ class TransferTarget:
         basename = os.path.basename(file)
         if len(basename) < 1:
             e = Exception("Invalid file specified - %s" % file)
-            print red(e)
+            print(red(e))
             raise e
         self.basename = basename
 
@@ -77,7 +79,8 @@ class TransferTarget:
 
     def clean(self):
         if self.should_compress():
-            local("rm -rf '%s'" % self.compressed_file())
+            with settings(hide('running'), warn_only=False):
+                local("rm -rf '%s'" % self.compressed_file())
 
     def compressed_basename(self):
         if not self.precompressed:
@@ -117,7 +120,8 @@ class TransferChunk:
         was_split = self.transfer_target.split_up()
         was_compressed = self.transfer_target.should_compress()
         if was_split or was_compressed:
-            local("rm '%s'" % self.chunk_path)
+            with settings(hide('running'), warn_only=False):
+                local("rm '%s'" % self.chunk_path)
 
 
 class FileTransferManager:
@@ -186,8 +190,8 @@ class FileTransferManager:
 
     def _launch_threads(self, num_threads, func):
         for thread_index in range(num_threads):
-            t = Thread(target=func)
-            t.daemon = True
+            t = Thread(name="%s-%s" % (func.__name__, thread_index), target=func)
+            t.setDaemon(True)
             t.start()
 
     def _enqueue_files(self, files, compressed_files):
@@ -234,18 +238,19 @@ class FileTransferManager:
                     simple_chunk = transfer_target.build_simple_chunk()
                     self._enqueue_chunk(simple_chunk)
             except Exception as e:
-                print red("Failed to compress a file to transfer")
-                print red(e)
+                print(red("Failed to compress a file to transfer"))
+                print(red(e))
+            except: 
+                print(red("Unknown exception in compress files"))
             finally:
                 self.compress_queue.task_done()
 
     def _decompress_files(self):
-        self._chown(self.destination)
-        sudo("chmod 777 %s" % (self.destination), user=self.transfer_as)
+        #self._chown(self.destination)
+        #sudo("chmod 777 %s" % (self.destination), user=self.transfer_as)
         if self.chunk_size > 0:
             self.transfer_complete_condition.acquire()
             while not self.transfer_complete:
-                print "Waiting for transfer complete condition"
                 self.transfer_complete_condition.wait()
             self.transfer_complete_condition.release()
         while True:
@@ -254,7 +259,7 @@ class FileTransferManager:
                 basename = transfer_target.basename
                 chunked = transfer_target.split_up()
                 compressed = transfer_target.do_compress or transfer_target.precompressed
-                print green(self.destination)
+                #print(green(self.destination))
                 with cd(self.destination):
                     retry_decompress = 0
                     while retry_decompress < 5:
@@ -277,11 +282,13 @@ class FileTransferManager:
                                 sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                             retry_decompress = 5
                         except:
-                            print red("User: %s, Failed to decompress. Retrying..." % (self.transfer_as) )
+                            print(red("User: %s, Failed to decompress. Retrying..." % (self.transfer_as) ))
                             retry_decompress = retry_decompress + 1
             except Exception as e:
-                print red("Failed to decompress or unsplit a transfered file.")
-                print red(e)
+                print(red("Failed to decompress or unsplit a transferred file."))
+                print(red(e))
+            except: 
+                print(red("Unknown exception in decompress files"))
             finally:
                 #sudo("chmod 755 %s" % (self.destination))
                 self.decompress_queue.task_done()
@@ -297,8 +304,10 @@ class FileTransferManager:
                 if not transfer_target.split_up():
                     self.decompress_queue.put(transfer_target)
             except Exception as e:
-                print red("Failed to upload a file.")
-                print red(e)
+                print(red("Failed to upload a file"))
+                print(red(e))
+            except: 
+                print(red("Unknown exception in put files"))
             finally:
                 transfer_chunk.clean_up()
                 self.transfer_queue.task_done()
@@ -310,21 +319,25 @@ class FileTransferManager:
         for attempt in range(self.transfer_retries):
             retry = False
             try:
-                put(source, destination, use_sudo=True)
-                self._chown(destination)
+                with settings(hide('running'), warn_only=False):
+                    print(yellow("Uploading %s" % (source)))
+                    pout = put(source, destination, use_sudo=True)
+                    if pout.failed:
+                        raise Exception("Failed transfer: %s" % (pout))
+                    self._chown(destination)
             except BaseException as e:
                 retry = True
-                print red(e)
-                print red("Failed to upload %s on attempt %d" % (source, attempt + 1))
+                print(red(e))
+                print(red("Failed to upload %s on attempt %d" % (source, attempt + 1)))
             except:
                 # Should never get here, delete this block when more confident
                 retry = True
-                print red("Failed to upload %s on attempt %d" % (source, attempt + 1))
+                print(red("Failed to upload %s on attempt %d with unknown exception" % (source, attempt + 1)))
             finally:
                 if not retry:
                     return
         e = Exception("Failed to transfer file %s, exiting..." % source)
-        print red(e)
+        print(red(e))
         raise e
 
     def _enqueue_chunk(self, transfer_chunk):
