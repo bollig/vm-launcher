@@ -1,6 +1,8 @@
 import os
 import gzip
 
+from time import sleep
+
 from operator import itemgetter
 from threading import Thread
 from threading import Condition
@@ -79,7 +81,7 @@ class TransferTarget:
 
     def clean(self):
         if self.should_compress():
-            with settings(hide('running'), warn_only=False):
+            with settings(show('running'), warn_only=False):
                 local("rm -rf '%s'" % self.compressed_file())
 
     def compressed_basename(self):
@@ -120,7 +122,7 @@ class TransferChunk:
         was_split = self.transfer_target.split_up()
         was_compressed = self.transfer_target.should_compress()
         if was_split or was_compressed:
-            with settings(hide('running'), warn_only=False):
+            with settings(show('running'), warn_only=False):
                 local("rm '%s'" % self.chunk_path)
 
 
@@ -218,18 +220,22 @@ class FileTransferManager:
 
     def _wait_for_completion(self):
         self.compress_queue.join()
+        print(green("Done compressing files"))
         self.transfer_queue.join()
+        print(green("Done transferring files"))
         self.transfer_complete_condition.acquire()
         self.transfer_complete = True
         self.transfer_complete_condition.notifyAll()
         self.transfer_complete_condition.release()
         self.decompress_queue.join()
+        print(green("Completed all tasks"))
 
     def _compress_files(self):
         while True:
             try:
                 transfer_target = self.compress_queue.get()
                 file = transfer_target.file
+                #print(yellow("Compressing file %s" % (file)))
                 if self.chunk_size > 0:
                     should_compress = transfer_target.should_compress()
                     self.file_splitter.split_file(file, should_compress, transfer_target)
@@ -262,28 +268,56 @@ class FileTransferManager:
                 #print(green(self.destination))
                 with cd(self.destination):
                     retry_decompress = 0
-                    while retry_decompress < 5:
+                    try_sleep = False
+                    decompressed_file = False
+                    while retry_decompress < 10:
                         destination = transfer_target.decompressed_basename()
                         try: 
                             if compressed and chunked:
                                 if transfer_target.precompressed:
-                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
+                                    sudo("touch '%s'" % (destination), user=self.transfer_as)
                                     self._chown(destination)
+                                    sudo("cat '%s_part'* | gunzip -c > %s" % (basename, destination), user=self.transfer_as)
                                     sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                                 else:
-                                    sudo("zcat '%s_part'* > %s" % (basename, destination), user=self.transfer_as)
+                                    sudo("touch '%s'" % (destination), user=self.transfer_as)
                                     self._chown(destination)
+                                    sudo("zcat '%s_part'* > %s" % (basename, destination), user=self.transfer_as)
                                     sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
                             elif compressed:
                                 sudo("gunzip -f '%s'" % transfer_target.compressed_basename(), user=self.transfer_as)
                             elif chunked:
-                                sudo("cat '%s'_part* > '%s'" % (basename, destination), user=self.transfer_as)
+                                sudo("touch '%s'" % (destination), user=self.transfer_as)
                                 self._chown(destination)
-                                sudo("rm '%s'_part*" % (basename), user=self.transfer_as)
-                            retry_decompress = 5
+                                if try_sleep: 
+                                    sudo("cat '%s'_part* > '%s' && sleep 10" % (basename, destination), user=self.transfer_as)
+                                    sudo("sync")
+                                else: 
+                                    sudo("cat '%s'_part* > '%s'" % (basename, destination), user=self.transfer_as)
+                                    sudo("sync")
+                                sudo("rm '%s'_part*" % (basename))
+                            retry_decompress = 10
+                            print(yellow("Finished uploading %s" % (destination)))
+                            decompressed_file = True
+                        except Exception as e:
+                            print(red("Failed to decompress. "))
+                            print(red(e))
+                            sudo("rm -f %s" % (destination))
+                            sleep(5)
+                            try_sleep = True
                         except:
                             print(red("User: %s, Failed to decompress. Retrying..." % (self.transfer_as) ))
+                            try: 
+                                sudo("rm -f %s" % (destination))
+                                sudo("sync")
+                                sleep(5)
+                            except:
+                                pass
+                            try_sleep = True
                             retry_decompress = retry_decompress + 1
+                    if not decompressed_file: 
+                        print(red("FAILED......."))
+                        break
             except Exception as e:
                 print(red("Failed to decompress or unsplit a transferred file."))
                 print(red(e))
@@ -300,6 +334,7 @@ class FileTransferManager:
                 transfer_target = transfer_chunk.transfer_target
                 compressed_file = transfer_chunk.chunk_path
                 basename = os.path.basename(compressed_file)
+                #print(yellow("Transferring file %s" % (basename)))
                 self._put_as_user(compressed_file, "%s/%s" % (self.destination, basename))
                 if not transfer_target.split_up():
                     self.decompress_queue.put(transfer_target)
@@ -319,16 +354,18 @@ class FileTransferManager:
         for attempt in range(self.transfer_retries):
             retry = False
             try:
-                with settings(hide('running'), warn_only=False):
-                    print(yellow("Uploading %s" % (source)))
+                with settings(show('everything'), warn_only=False):
                     pout = put(source, destination, use_sudo=True)
+                    self._chown(destination)
                     if pout.failed:
                         raise Exception("Failed transfer: %s" % (pout))
-                    self._chown(destination)
+                    else: 
+                        basename = os.path.basename(destination)
+                        print(yellow("Sent file %s" % (basename)))
             except BaseException as e:
                 retry = True
-                print(red(e))
                 print(red("Failed to upload %s on attempt %d" % (source, attempt + 1)))
+                print(red(e))
             except:
                 # Should never get here, delete this block when more confident
                 retry = True
