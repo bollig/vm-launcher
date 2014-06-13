@@ -413,7 +413,9 @@ class Ec2VmLauncher(VmLauncher):
         self._install_packaging_scripts()
 
     def _install_ec2_tools(self):
-        sudo("apt-add-repository ppa:awstools-dev/awstools")
+        sudo("apt-add-repository -y ppa:awstools-dev/awstools")
+        # enable multiverse
+        sudo('sed -i.dist \'s,universe$,universe multiverse,\' /etc/apt/sources.list')
         sudo("apt-get update")
         sudo('export DEBIAN_FRONTEND=noninteractive; sudo -E apt-get install ec2-api-tools ec2-ami-tools -y --force-yes')
 
