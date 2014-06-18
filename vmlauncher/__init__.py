@@ -382,12 +382,20 @@ class Ec2VmLauncher(VmLauncher):
 
     def package(self, **kwds):
         package_type = self._driver_options().get('package_type', 'default')
-        if package_type == "create_image":
-            self._create_image(**kwds)
+        if package_type == "create_ebs_image":
+            print(red('Sorry, EBS images are not accepted at this time'))
+            pass
+        #    self._create_ebs_image(**kwds)
         else:
-            self._default_package(**kwds)
+            self._create_instance_store_image(**kwds)
 
-    def _create_image(self, **kwds):
+    def _create_ebs_image(self, **kwds):
+        # connect to ec2 api
+        # get an instance id from some unknown static IP. 
+        # get the package image name
+        # get the package description
+        # create and ec2 image (I believe this is an EBS image)
+        # make the EBS image public
         ec2_conn = self.boto_connection()
         instance_id = run("curl --silent http://169.254.169.254/latest/meta-data/instance-id")
 
@@ -405,12 +413,13 @@ class Ec2VmLauncher(VmLauncher):
         if self._driver_options().get("make_public", False):
             ec2_conn.modify_image_attribute(image_id, attribute='launchPermission', operation='add', groups=['all'])
 
-    def _default_package(self, **kwds):
+    def _create_instance_store_image(self, **kwds):
         env.packaging_dir = "/mnt/packaging"
         sudo("mkdir -p %s" % env.packaging_dir)
         self._copy_keys()
         self._install_ec2_tools()
         self._install_packaging_scripts()
+        self._execute_packaging_scripts()
 
     def _install_ec2_tools(self):
         sudo("apt-add-repository -y ppa:awstools-dev/awstools")
@@ -421,18 +430,21 @@ class Ec2VmLauncher(VmLauncher):
 
     def _install_packaging_scripts(self):
         user_id = self._driver_options()["user_id"]
-        bundle_cmd = "sudo ec2-bundle-vol -k %s/ec2_key -c%s/ec2_cert -u %s" % \
-            (env.packaging_dir, env.packaging_dir, user_id)
+        bucket = self._driver_options()["package_bucket"]
+        name = self.package_image_name()
+        bundle_dir = "%s/%s" % (env.packaging_dir, name)
+        manifest = "image.manifest.xml"
+
+        sudo("mkdir -p %s/%s" % bundle_dir)
+
+        bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c%s/ec2_cert -u %s -r x86_64 -d %s" % \
+            (env.packaging_dir, env.packaging_dir, user_id, bundle_dir)
         self._write_script("%s/bundle_image.sh" % env.packaging_dir, bundle_cmd)
 
-        bucket = self._driver_options()["package_bucket"]
-        upload_cmd = "sudo ec2-upload-bundle -b %s -m /tmp/image.manifest.xml -a %s -s %s" % \
-            (bucket,  self.access_id(), self.secret_key())
+        upload_cmd = "sudo ec2-upload-bundle -b %s -m %s/%s -a %s -s %s" % \
+            (bucket, bundle_dir, manifest, self.access_id(), self.secret_key())
         self._write_script("%s/upload_bundle.sh" % env.packaging_dir, upload_cmd)
 
-        name = self.package_image_name()
-
-        manifest = "image.manifest.xml"
         register_cmd = "sudo ec2-register -K %s/ec2_key -C %s/ec2_cert %s/%s -n %s" % (env.packaging_dir, env.packaging_dir, bucket, manifest, name)
         self._write_script("%s/register_bundle.sh" % env.packaging_dir, register_cmd)
 
@@ -464,6 +476,11 @@ class Ec2VmLauncher(VmLauncher):
             if location.availability_zone.name == availability_zone:
                 break
         return location
+
+    def _execute_packaging_scripts(self): 
+        sudo("%s/build_image.sh" % env.packaging_dir)
+        sudo("%s/upload_bundle.sh" % env.packaging_dir)
+        sudo("%s/register_bundle.sh" % env.packaging_dir)
 
     def create_node(self, hostname, image_id=None, size_id=None, location=None, **kwds):
         self._connect_driver()
