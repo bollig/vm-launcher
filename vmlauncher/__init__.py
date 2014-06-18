@@ -478,7 +478,7 @@ class Ec2VmLauncher(VmLauncher):
         return location
 
     def _execute_packaging_scripts(self): 
-        sudo("%s/build_image.sh" % env.packaging_dir)
+        sudo("%s/bundle_image.sh" % env.packaging_dir)
         sudo("%s/upload_bundle.sh" % env.packaging_dir)
         sudo("%s/register_bundle.sh" % env.packaging_dir)
 
