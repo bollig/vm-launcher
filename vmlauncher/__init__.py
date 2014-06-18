@@ -435,7 +435,7 @@ class Ec2VmLauncher(VmLauncher):
         bundle_dir = "%s/%s" % (env.packaging_dir, name)
         manifest = "image.manifest.xml"
 
-        sudo("mkdir -p %s/%s" % bundle_dir)
+        sudo("mkdir -p %s" % bundle_dir)
 
         bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c%s/ec2_cert -u %s -r x86_64 -d %s" % \
             (env.packaging_dir, env.packaging_dir, user_id, bundle_dir)
