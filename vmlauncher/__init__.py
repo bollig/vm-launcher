@@ -424,7 +424,7 @@ class Ec2VmLauncher(VmLauncher):
     def _install_ec2_tools(self):
         sudo("apt-add-repository -y ppa:awstools-dev/awstools")
         sudo("apt-get update")
-        sudo("apt-get install -y --force-yes ec2-api-tools ruby")
+        sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
         # The awstools ppa does not offer the latest version of ec2-ami-tools.
         # if it did, we would use the sed and install commented below
         sudo("wget http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.5.3.zip")
