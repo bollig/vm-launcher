@@ -491,7 +491,7 @@ class Ec2VmLauncher(VmLauncher):
             try: 
                 sudo("%s/upload_bundle.sh" % env.packaging_dir)
                 attempts = 5
-            except Exception e:
+            except:
                 attempts = attempts + 1
                 if attempts < 5:
                     print(red("Exception encountered. Retrying..."))
