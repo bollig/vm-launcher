@@ -423,10 +423,16 @@ class Ec2VmLauncher(VmLauncher):
 
     def _install_ec2_tools(self):
         sudo("apt-add-repository -y ppa:awstools-dev/awstools")
-        # enable multiverse
-        sudo('sed -i.dist \'s,universe$,universe multiverse,\' /etc/apt/sources.list')
         sudo("apt-get update")
-        sudo('export DEBIAN_FRONTEND=noninteractive; sudo -E apt-get install ec2-api-tools ec2-ami-tools -y --force-yes')
+        sudo("apt-get install -y --force-yes ec2-api-tools ruby")
+        # The awstools ppa does not offer the latest version of ec2-ami-tools.
+        # if it did, we would use the sed and install commented below
+        sudo("wget http://s3.amazonaws.com/ec2-downloads/ec2-ami-tools-1.5.3.zip")
+        sudo("unzip ec2-ami-tools-1.5.3.zip")
+        sudo("cp -r ec2-ami-tools-1.5.3/* /usr/. --verbose")
+        # enable multiverse
+        #sudo('sed -i.dist \'s,universe$,universe multiverse,\' /etc/apt/sources.list')
+        #sudo('export DEBIAN_FRONTEND=noninteractive; sudo -E apt-get install ec2-api-tools ec2-ami-tools -y --force-yes')
 
     def _install_packaging_scripts(self):
         user_id = self._driver_options()["user_id"]
