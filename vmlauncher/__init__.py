@@ -485,7 +485,19 @@ class Ec2VmLauncher(VmLauncher):
 
     def _execute_packaging_scripts(self): 
         sudo("%s/bundle_image.sh" % env.packaging_dir)
-        sudo("%s/upload_bundle.sh" % env.packaging_dir)
+        # Uploading can fail due to bad network, amazon, s3 lag, etc. 
+        attempts = 0
+        while attempts < 5:
+            try: 
+                sudo("%s/upload_bundle.sh" % env.packaging_dir)
+                attempts = 5
+            except Exception e:
+                attempts = attempts + 1
+                if attempts < 5:
+                    print(red("Exception encountered. Retrying..."))
+                else: 
+                    # re-raises the exception
+                    raise
         sudo("%s/register_bundle.sh" % env.packaging_dir)
 
     def create_node(self, hostname, image_id=None, size_id=None, location=None, **kwds):
