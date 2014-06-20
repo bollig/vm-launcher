@@ -1,0 +1,13 @@
+It is impossible to stash genome indices in /mnt if we package an
+instance-store image that is bundled and stashed in s3. See
+https://groups.google.com/forum/#!topic/ec2ubuntu/6CZEstXQT4U for details.
+
+A better option is to snapshot and register and EBS image which has the indices
+built into the snapshot image. This will be faster to boot, can be larger than
+10G, and will remove the need to scp all indices at boot. Also, this is
+consistent with our current openstack installation which does not provide
+volume snapshotting or instance-store images. Everything on openstack is the
+equivalent to EBS. The Dell Compellent driver does not allow snapshotting
+volumes, so the data (~10G) has to be built into the image. 
+
+-E
