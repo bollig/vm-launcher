@@ -443,7 +443,9 @@ class Ec2VmLauncher(VmLauncher):
 
         sudo("mkdir -p %s" % bundle_dir)
 
-        bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c%s/ec2_cert -u %s -r x86_64 -d %s" % \
+        # --no-filter keeps all certificates and keys. required for postgres
+        # --include /mnt/galaxyIndices
+        bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c%s/ec2_cert -u %s -r x86_64 -d %s --include \"/mnt/galaxyIndices/*\" " % \
             (env.packaging_dir, env.packaging_dir, user_id, bundle_dir)
         self._write_script("%s/bundle_image.sh" % env.packaging_dir, bundle_cmd)
 
