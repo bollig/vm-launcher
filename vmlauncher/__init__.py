@@ -444,8 +444,10 @@ class Ec2VmLauncher(VmLauncher):
         sudo("mkdir -p %s" % bundle_dir)
 
         # --no-filter keeps all certificates and keys. required for postgres
-        # --include /mnt/galaxyIndices
-        bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c%s/ec2_cert -u %s -r x86_64 -d %s --include \"/mnt/galaxyIndices/*\" " % \
+        # --include /mnt/galaxyIndices/* does not function properly. we must
+        # give absolute path to every file under the path and ensure the list
+        # is comma separated
+        bundle_cmd = "sudo ec2-bundle-vol --no-filter -k %s/ec2_key -c %s/ec2_cert -u %s -r x86_64 -d %s --include $( find /mnt/galaxyIndices/* -exec printf '%%s,' {} \; )" % \
             (env.packaging_dir, env.packaging_dir, user_id, bundle_dir)
         self._write_script("%s/bundle_image.sh" % env.packaging_dir, bundle_cmd)
 
