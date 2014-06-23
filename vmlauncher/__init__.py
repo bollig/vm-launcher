@@ -415,14 +415,15 @@ class Ec2VmLauncher(VmLauncher):
         keep_waiting = True
         print("Image snapshot queued: %s. Waiting for completion..." % (ec2_new_image_id) )
         while keep_waiting: 
-            imout = sudo("ec2-describe-images %s -O %s -W %s" % (ec2_new_image_id, self.access_id(), self.secret_key())
-            if imout.split()[4] == 'pending': 
+            imout = sudo("ec2-describe-images %s -O %s -W %s" % (ec2_new_image_id, self.access_id(), self.secret_key()))
+            qstat = imout.split()[4] 
+            if qstat == 'pending': 
                 keep_waiting = True
                 print('still waiting...')
                 time.sleep(20)
             else: 
                 keep_waiting = False
-        print "Snapshot is complete: %s" % (imout))
+        print("Snapshot is complete: %s" % (imout))
 
     def _create_instance_store_image(self, **kwds):
         env.packaging_dir = "/mnt/packaging"
