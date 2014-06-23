@@ -381,37 +381,48 @@ class Ec2VmLauncher(VmLauncher):
         return DEFAULT_AWS_IMAGE_ID
 
     def package(self, **kwds):
-        package_type = self._driver_options().get('package_type', 'default')
-        if package_type == "create_ebs_image":
-            print(red('Sorry, EBS images are not accepted at this time'))
-            pass
-        #    self._create_ebs_image(**kwds)
-        else:
+        package_type = self._driver_options().get('package_type', 'ebs_image')
+        if package_type == "ebs_image":
+            self._create_ebs_image(**kwds)
+        elif package_type == "instance_store":
             self._create_instance_store_image(**kwds)
+        else: 
+            print("Sorry, package_type must be one of 'ebs_image' or 'instance_store'")
+            raise Exception("Invalid package_type")
 
     def _create_ebs_image(self, **kwds):
+        
+        sudo("apt-add-repository -y ppa:awstools-dev/awstools")
+        sudo("apt-get update")
+        sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
+
         # connect to ec2 api
         # get an instance id from some unknown static IP. 
         # get the package image name
         # get the package description
         # create and ec2 image (I believe this is an EBS image)
         # make the EBS image public
-        ec2_conn = self.boto_connection()
-        instance_id = run("curl --silent http://169.254.169.254/latest/meta-data/instance-id")
+        
+        user_id = self._driver_options()["user_id"]
+        bucket = self._driver_options()["package_bucket"]
+        name = self.package_image_name()
+        bundle_dir = "%s/%s" % (env.packaging_dir, name)
+        manifest = "image.manifest.xml"
 
-        if "name" not in kwds:
-            name = self.package_image_name()
-        else:
-            name = kwds["name"]
+        imout = sudo("ec2-create-image --name \"%s\" -d \"%s\" -O %s -W %s $( ec2metadata --instance-id )" % (self.package_image_name(), self.package_image_description(), self.access_id(), self.secret_key()))
+        ec2_new_image_id = imout.split()[1]
 
-        if "description" not in kwds:
-            description = self.package_image_description(default="")
-        else:
-            description = kwds["description"]
-
-        image_id = ec2_conn.create_image(instance_id, name=name, description=description)
-        if self._driver_options().get("make_public", False):
-            ec2_conn.modify_image_attribute(image_id, attribute='launchPermission', operation='add', groups=['all'])
+        keep_waiting = True
+        print("Image snapshot queued: %s. Waiting for completion..." % (ec2_new_image_id) )
+        while keep_waiting: 
+            imout = sudo("ec2-describe-images %s -O %s -W %s" % (ec2_new_image_id, self.access_id(), self.secret_key())
+            if imout.split()[4] is 'pending': 
+                keep_waiting = True
+                print('still waiting...')
+                time.sleep(20)
+            else: 
+                keep_waiting = False
+        print "Snapshot is complete: %s" % (imout))
 
     def _create_instance_store_image(self, **kwds):
         env.packaging_dir = "/mnt/packaging"
