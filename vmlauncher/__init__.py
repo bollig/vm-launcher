@@ -391,24 +391,9 @@ class Ec2VmLauncher(VmLauncher):
             raise Exception("Invalid package_type")
 
     def _create_ebs_image(self, **kwds):
-        
         sudo("apt-add-repository -y ppa:awstools-dev/awstools")
         sudo("apt-get update")
         sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
-
-        # connect to ec2 api
-        # get an instance id from some unknown static IP. 
-        # get the package image name
-        # get the package description
-        # create and ec2 image (I believe this is an EBS image)
-        # make the EBS image public
-        
-        user_id = self._driver_options()["user_id"]
-        bucket = self._driver_options()["package_bucket"]
-        name = self.package_image_name()
-        bundle_dir = "%s/%s" % (env.packaging_dir, name)
-        manifest = "image.manifest.xml"
-
         imout = sudo("ec2-create-image --name \"%s\" -d \"%s\" -O %s -W %s $( ec2metadata --instance-id )" % (self.package_image_name(), self.package_image_description(), self.access_id(), self.secret_key()))
         ec2_new_image_id = imout.split()[1]
 
@@ -421,9 +406,11 @@ class Ec2VmLauncher(VmLauncher):
                 keep_waiting = True
                 print('still waiting...')
                 time.sleep(20)
+            elif qstat == 'failed':
+                raise Exception("Image Snapshot Failed: %s" % (ec2_new_image_id))
             else: 
                 keep_waiting = False
-        print("Snapshot is complete: %s" % (imout))
+        print("Snapshot is complete: %s" % (imout.split()[1]))
 
     def _create_instance_store_image(self, **kwds):
         env.packaging_dir = "/mnt/packaging"
