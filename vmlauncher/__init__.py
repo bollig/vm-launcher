@@ -416,7 +416,7 @@ class Ec2VmLauncher(VmLauncher):
         print("Image snapshot queued: %s. Waiting for completion..." % (ec2_new_image_id) )
         while keep_waiting: 
             imout = sudo("ec2-describe-images %s -O %s -W %s" % (ec2_new_image_id, self.access_id(), self.secret_key())
-            if imout.split()[4] is 'pending': 
+            if imout.split()[4] == 'pending': 
                 keep_waiting = True
                 print('still waiting...')
                 time.sleep(20)
