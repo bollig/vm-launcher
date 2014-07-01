@@ -205,7 +205,7 @@ class VmLauncher:
     def _build_runtime_properties():
         pass
     
-    def get_runtime_properties(): 
+    def get_runtime_properties(self): 
         _build_runtime_properties()
         return self.runtime_properties
 
