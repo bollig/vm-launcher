@@ -260,13 +260,18 @@ class OpenstackVmLauncher(VmLauncher):
     """ Wrapper around libcloud's openstack API. """
 
     def _build_runtime_properties(self):
+        sudo("echo \"deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main\" > /etc/apt/sources.list.d/cloudarchive.list")
+        sudo("apt-get update")
+        sudo("apt-get install -y ubuntu-cloud-keyring")
+        sudo("apt-get update")
+        sudo("apt-get install -y python-novaclient")
         self.runtime_properties['USE_NOVA'] = 1
-        self.runtime_properties['OS_USER'] = self._driver_options()['username']
+        self.runtime_properties['OS_USERNAME'] = self._driver_options()['username']
         self.runtime_properties['OS_PASSWORD'] = self._driver_options()['password']
         self.runtime_properties['OS_TENANT_ID'] = self._driver_options()['ex_tenant_id']
         self.runtime_properties['OS_TENANT_NAME'] = self._driver_options()['ex_tenant_name']
-        self.runtime_properties['OS_AUTH_URL'] = "https://%s:5000/v2.0" % (self._driver_options()['bypass_host'])
-        self.runtime_properties['OS_BYPASS_URL'] = "https://%s/v2/%s" % (self._driver_options()['bypass_host'], self._driver_options()['ex_tenant_id'])
+        self.runtime_properties['OS_AUTH_URL'] = "http://%s:5000/v2.0" % (self._driver_options()['bypass_host'])
+        self.runtime_properties['OS_BYPASS_URL'] = "http://%s:8774/v2/%s" % (self._driver_options()['bypass_host'], self._driver_options()['ex_tenant_id'])
 
     def get_ip(self):
         return self._wait_for_node_info(lambda node: node.public_ips + node.private_ips)
