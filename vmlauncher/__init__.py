@@ -260,6 +260,7 @@ class OpenstackVmLauncher(VmLauncher):
     """ Wrapper around libcloud's openstack API. """
 
     def _build_runtime_properties():
+        self.runtime_properties['USE_NOVA'] = 1
         self.runtime_properties['OS_USER'] = self._driver_options()['username']
         self.runtime_properties['OS_PASSWORD'] = self._driver_options()['password']
         self.runtime_properties['OS_TENANT_ID'] = self._driver_options()['ex_tenant_id']
