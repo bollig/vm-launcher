@@ -202,11 +202,11 @@ class VmLauncher:
         description = self._driver_options().get("package_image_description", default)
         return description
 
-    def _build_runtime_properties():
+    def _build_runtime_properties(self):
         pass
     
     def get_runtime_properties(self): 
-        _build_runtime_properties()
+        self._build_runtime_properties()
         return self.runtime_properties
 
 
@@ -259,7 +259,7 @@ class VagrantVmLauncher(VmLauncher):
 class OpenstackVmLauncher(VmLauncher):
     """ Wrapper around libcloud's openstack API. """
 
-    def _build_runtime_properties():
+    def _build_runtime_properties(self):
         self.runtime_properties['USE_NOVA'] = 1
         self.runtime_properties['OS_USER'] = self._driver_options()['username']
         self.runtime_properties['OS_PASSWORD'] = self._driver_options()['password']
