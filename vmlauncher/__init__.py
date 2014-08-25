@@ -305,8 +305,8 @@ class OpenstackVmLauncher(VmLauncher):
                                      ex_security_groups=sec_group,
                                      **kwds)
 
-        print 'Waiting for boot to complete.'
-        nodes_ips = self.conn.wait_until_running(nodes=[node], ssh_interface='private_ips')
+        print 'Waiting up to 3600 seconds for boot to complete.'
+        nodes_ips = self.conn.wait_until_running(nodes=[node], ssh_interface='private_ips', timeout=3600)
         active_node = nodes_ips[0][0]
         print 'Boot complete. Node is: ', active_node
 
