@@ -260,11 +260,6 @@ class OpenstackVmLauncher(VmLauncher):
     """ Wrapper around libcloud's openstack API. """
 
     def _build_runtime_properties(self):
-        sudo("echo \"deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main\" > /etc/apt/sources.list.d/cloudarchive.list")
-        sudo("apt-get update")
-        sudo("apt-get install -y ubuntu-cloud-keyring")
-        sudo("apt-get update")
-        sudo("apt-get install -y python-novaclient")
         self.runtime_properties['USE_NOVA'] = 1
         self.runtime_properties['OS_USERNAME'] = self._driver_options()['username']
         self.runtime_properties['OS_PASSWORD'] = self._driver_options()['password']
@@ -309,6 +304,13 @@ class OpenstackVmLauncher(VmLauncher):
         nodes_ips = self.conn.wait_until_running(nodes=[node], ssh_interface='private_ips', timeout=3600)
         active_node = nodes_ips[0][0]
         print 'Boot complete. Node is: ', active_node
+
+        # Pre-install some basic cloud utilities
+        sudo("echo \"deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main\" > /etc/apt/sources.list.d/cloudarchive.list")
+        sudo("apt-get update")
+        sudo("apt-get install -y ubuntu-cloud-keyring")
+        sudo("apt-get update")
+        sudo("apt-get install -y python-novaclient")
 
         return active_node
 
