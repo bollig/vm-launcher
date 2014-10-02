@@ -51,7 +51,6 @@ class VmLauncher:
         self.node = node
         self.uuid = node.uuid
         self.connect(conn)
-        self._boot_provision()
 
     def _connect_driver(self):
         if not getattr(self, 'conn', None):
@@ -150,7 +149,7 @@ class VmLauncher:
                 open(last_instance_path, "w").write(node.uuid)
         return node
 
-    def _boot_provision(self):
+    def base_provision(self):
         pass
 
     def _image_from_id(self, image_id=None):
@@ -311,7 +310,8 @@ class OpenstackVmLauncher(VmLauncher):
 
         return active_node
 
-    def _boot_provision(self): 
+
+    def base_provision(self): 
         # Pre-install some basic cloud utilities
         sudo("echo \"deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main\" > /etc/apt/sources.list.d/cloudarchive.list")
         sudo("apt-get update")
