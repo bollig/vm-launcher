@@ -268,6 +268,7 @@ class OpenstackVmLauncher(VmLauncher):
         self.runtime_properties['OS_PASSWORD'] = self._driver_options()['password']
         self.runtime_properties['OS_TENANT_ID'] = self._driver_options()['ex_tenant_id']
         self.runtime_properties['OS_TENANT_NAME'] = self._driver_options()['ex_tenant_name']
+        self.runtime_properties['OS_REGION_NAME'] = self._driver_options()['ex_region_name']
         self.runtime_properties['OS_AUTH_URL'] = "http://%s:5000/v2.0" % (self._driver_options()['bypass_host'])
         self.runtime_properties['OS_BYPASS_URL'] = "http://%s:8774/v2/%s" % (self._driver_options()['bypass_host'], self._driver_options()['ex_tenant_id'])
 
@@ -333,7 +334,8 @@ class OpenstackVmLauncher(VmLauncher):
                               'ex_force_auth_url',
                               'ex_force_auth_version',
                               'ex_force_base_url',
-                              'ex_tenant_name']
+                              'ex_tenant_name', 
+                              'ex_region_name']
 
         driver_options = self._get_driver_options(driver_option_keys)
         print driver_options
