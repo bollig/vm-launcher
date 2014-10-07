@@ -314,6 +314,7 @@ class OpenstackVmLauncher(VmLauncher):
     def base_provision(self): 
         # Pre-install some basic cloud utilities
         sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E084DAB9')
+        sudo('apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5EDB1B62EC4926EA')
         sudo("echo \"deb http://ubuntu-cloud.archive.canonical.com/ubuntu precise-updates/havana main\" > /etc/apt/sources.list.d/cloudarchive.list")
         sudo("apt-get update")
         sudo("apt-get install -y ubuntu-cloud-keyring")
