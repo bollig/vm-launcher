@@ -93,7 +93,8 @@ class TransferTarget:
 
     def decompressed_basename(self):
         basename = self.basename
-        if basename.endswith(".gz"):
+        #if basename.endswith(".gz"):
+        if not self.precompressed and self.should_compress():
             decompressed_basename = basename[:-len(".gz")]
         else:
             decompressed_basename = basename
