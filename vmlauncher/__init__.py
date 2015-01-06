@@ -106,7 +106,7 @@ class VmLauncher:
         return 22
 
     def connect(self, conn, tries=1200):
-        print 'Connecting via SSH. (Max %d tries)' % (tries)
+        print '[%s] Connecting via SSH. (Max %d tries)' % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), tries)
         i = 0
         while i < tries:
             try:
@@ -124,7 +124,7 @@ class VmLauncher:
                 except:
                     print 'Failed to connect ssh client'
                     raise
-                print 'SSH Connection Established.'
+                print '[%s] SSH Connection Established.' % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 return
             except:
                 print '[%s] Connection Timeout. Retrying...' % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
