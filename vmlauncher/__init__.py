@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import datetime
 
 from libcloud.compute.ssh import SSHClient
 from libcloud.compute.base import NodeImage, NodeSize
@@ -104,19 +105,29 @@ class VmLauncher:
     def get_ssh_port(self):
         return 22
 
-    def connect(self, conn, tries=100):
-        print 'Connecting via SSH.'
+    def connect(self, conn, tries=1200):
+        print 'Connecting via SSH. (Max %d tries)' % (tries)
         i = 0
         while i < tries:
             try:
-                ssh_client = self.__get_ssh_client()
+                ssh_client = None
+                try: 
+                    ssh_client = self.__get_ssh_client()
+                except:
+                    print 'Failed to get ssh client'
+                    raise
                 # OpenStack stalls if the timeout is too high. 3 seconds is recommended default, so we just increase the number of tries
                 # Was 5 x 60 seconds so I went with 100 x 3 seconds
-                conn._ssh_client_connect(ssh_client=ssh_client, timeout=3)
+                # This was boosted to 1200 attempts for leniency in connecting to slow booting VMs
+                try:
+                    conn._ssh_client_connect(ssh_client=ssh_client, timeout=3)
+                except:
+                    print 'Failed to connect ssh client'
+                    raise
                 print 'SSH Connection Established.'
                 return
             except:
-                print 'Connection Timeout. Retrying...'
+                print '[%s] Connection Timeout. Retrying...' % (datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 i = i + 1
 
     def list(self):
