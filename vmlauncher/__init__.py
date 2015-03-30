@@ -403,6 +403,20 @@ class EucalyptusVmLauncher(VmLauncher):
 
 class Ec2VmLauncher(VmLauncher):
 
+    def base_provision(self): 
+        # Pre-install some basic cloud utilities
+        sudo("apt-add-repository -y ppa:awstools-dev/awstools")
+        sudo("apt-get update")
+        sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
+
+    def _build_runtime_properties(self): 
+        # This routine is run on every instance start. This will force instances to terminate when stopped
+        try: 
+            sudo("ec2-modify-instance-attribute --instance-initiated-shutdown-behavior terminate -O %s -W %s $( ec2metadata --instance-id )" % (self.access_id(), self.secret_key()))
+        except: 
+            print(red("Unable to set instance stop behavior (terminate)"))
+
+
     def get_ip(self):
         return self._wait_for_node_info(lambda node: node.extra['dns_name'])
 
