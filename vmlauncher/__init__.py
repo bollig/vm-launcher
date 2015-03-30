@@ -403,18 +403,18 @@ class EucalyptusVmLauncher(VmLauncher):
 
 class Ec2VmLauncher(VmLauncher):
 
-    def base_provision(self): 
-        # Pre-install some basic cloud utilities
-        sudo("apt-add-repository -y ppa:awstools-dev/awstools")
-        sudo("apt-get update")
-        sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
+   # def base_provision(self): 
+   #     # Pre-install some basic cloud utilities
+   #     sudo("apt-add-repository -y ppa:awstools-dev/awstools")
+   #     sudo("apt-get update")
+   #     sudo("apt-get install -y --force-yes ec2-api-tools ruby kpartx")
 
-    def _build_runtime_properties(self): 
-        # This routine is run on every instance start. This will force instances to terminate when stopped
-        try: 
-            sudo("ec2-modify-instance-attribute --instance-initiated-shutdown-behavior terminate -O %s -W %s $( ec2metadata --instance-id )" % (self.access_id(), self.secret_key()))
-        except: 
-            print(red("Unable to set instance stop behavior (terminate)"))
+   # def _build_runtime_properties(self): 
+   #     # This routine is run on every instance start. This will force instances to terminate when stopped
+   #     try: 
+   #         sudo("ec2-modify-instance-attribute --instance-initiated-shutdown-behavior terminate -O %s -W %s $( ec2metadata --instance-id )" % (self.access_id(), self.secret_key()))
+   #     except: 
+   #         print(red("Unable to set instance stop behavior (terminate)"))
 
 
     def get_ip(self):
@@ -582,6 +582,15 @@ class Ec2VmLauncher(VmLauncher):
                                      size=size,
                                      location=location,
                                      **kwds)
+        try: 
+            retB = self.conn.ex_modify_instance_attribute(node, {'InstanceInitiatedShutdownBehavior.Value': 'terminate'})
+            if not retB: 
+                print("FAILED TO SET TERMINATE BEHAVIOR ON SHUTDOWN")
+            else: 
+                print("SET TERMINATE BEHAVIOR ON SHUTDOWN")
+        except: 
+            print("FAILED TO SET TERMINATE BEHAVIOR ON SHUTDOWN")
+            raise
         return node
 
     def attach_public_ip(self, public_ip=None):
